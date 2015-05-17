@@ -1,9 +1,15 @@
 /**
- * easybind.js | version 0.0.1
+ *  _     _           _     _     _      
+ * | |__ (_)_ __   __| |___(_) __| | ___ 
+ * | '_ \| | '_ \ / _` / __| |/ _` |/ _ \
+ * | |_) | | | | | (_| \__ \ | (_| |  __/
+ * |_.__/|_|_| |_|\__,_|___/_|\__,_|\___|
+ *                                       
+ * bindside.js | version 0.0.1
  * (c) Travis Loncar (https://github.com/tbloncar)
  */
 
-var binder = (function __binder__() {
+var bindside = (function __bindside__() {
 	/**
 	 * Represents a generic value.
 	 * @class
@@ -21,7 +27,7 @@ var binder = (function __binder__() {
 	 * property dependencies.
 	 * @class
 	 *
-	 * @param {ViewModel} vm - The binder view model
+	 * @param {ViewModel} vm - The bindside view model
 	 */
 	function ViewModelProxy(vm) {
 		var self = this;
@@ -32,17 +38,19 @@ var binder = (function __binder__() {
 		// Mime VM props, injecting dependency tracking
 		// into each property function
 		for(var p in this.vm.props) {
+      /* jshint ignore:start */
 			(function(p) {
 				self[p] = function() {
 					self.propsUsed.push(p);
 					return self.vm[p]();
 				};
 			})(p);
+      /* jshint ignore:end */
 		}
 	}
 
 	/**
-	 * The binder view model; used to declare data-bound
+	 * The bindside view model; used to declare data-bound
 	 * properties and actions.
 	 * @class
 	 *
@@ -122,6 +130,18 @@ var binder = (function __binder__() {
     };
   };
 
+	ViewModel.prototype.model = function(model) {
+		this.model = model;
+
+		if(model) {
+			for(var k in model) {
+				this[k](model[k]);		
+			}	
+		} else {
+			return this.model;	
+		}
+	};
+
 	ViewModel.prototype.getNodesForProp = function(prop) {
 		return this.el.querySelectorAll('[data-prop="' + prop + '"]');
 	};
@@ -129,19 +149,23 @@ var binder = (function __binder__() {
   ViewModel.prototype.bindProps = function() {
     var self = this;
 
+    function bindProp(e) {
+      if(this instanceof HTMLInputElement ||
+         this instanceof HTMLTextAreaElement) {
+        self[p](this.value); 
+      }
+    }
+
     for(var p in this.props) {
       var nodes = self.getNodesForProp(p);
 
+      /* jshint ignore:start */
       (function(p) {
 				for(var i = 0, l = nodes.length; i < l; i++) {
-					nodes[i].addEventListener('change', function(e) {
-            if(this instanceof HTMLInputElement ||
-							 this instanceof HTMLTextAreaElement) {
-              self[p](this.value); 
-            }
-          }); 
+					nodes[i].addEventListener('change', bindProp); 
 				}
       })(p);
+      /* jshint ignore:end */
     }
   };
 
@@ -158,6 +182,12 @@ var binder = (function __binder__() {
 		}
 	}
 
+  /**
+   * Creates the view model
+   *
+   * @param {string} selector - Passed to VM to create scope
+   * @param {function} cb - VM callback
+   */
   function createViewModel(selector, cb) {
     var vm = new ViewModel(selector); 
     cb(vm);
