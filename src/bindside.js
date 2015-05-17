@@ -149,11 +149,13 @@ var bindside = (function __bindside__() {
   ViewModel.prototype.bindProps = function() {
     var self = this;
 
-    function bindProp(e) {
-      if(this instanceof HTMLInputElement ||
-         this instanceof HTMLTextAreaElement) {
-        self[p](this.value); 
-      }
+    function bindProp(p) {
+      return function(e) {
+        if(this instanceof HTMLInputElement ||
+           this instanceof HTMLTextAreaElement) {
+          self[p](this.value); 
+        }
+      };
     }
 
     for(var p in this.props) {
@@ -162,7 +164,7 @@ var bindside = (function __bindside__() {
       /* jshint ignore:start */
       (function(p) {
         for(var i = 0, l = nodes.length; i < l; i++) {
-          nodes[i].addEventListener('change', bindProp); 
+          nodes[i].addEventListener('change', bindProp(p)); 
         }
       })(p);
       /* jshint ignore:end */
