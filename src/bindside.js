@@ -126,7 +126,7 @@ var bindside = (function __bindside__() {
     var self = this;
 
     this.actions[name] = function() {
-      cb.call(self.props);
+      cb.call(self);
     };
   };
 
@@ -143,11 +143,33 @@ var bindside = (function __bindside__() {
   };
 
   ViewModel.prototype.getNodesForProp = function(prop) {
-    return this.el.querySelectorAll('[data-prop="' + prop + '"]');
+    return this.el.querySelectorAll('[data-bs-prop="' + prop + '"]');
   };
 
-  ViewModel.prototype.bindProps = function() {
-    var self = this;
+  ViewModel.prototype.getActionBindings = function() {
+    var nodes = this.el.querySelectorAll('[data-bs-action]'),
+      bindings = [],
+      actionArr; 
+
+    for(var i = 0, l = nodes.length; i < l; i++) {
+      actionArr = nodes[i].getAttribute('data-bs-action').split('::');
+
+      if(actionArr.length !== 2) {
+        throw 'Actions must use the "event::action" syntax.'; 
+      }
+
+      bindings.push({
+        node: nodes[i],
+        event: actionArr[0],
+        action: this.actions[actionArr[1]]
+      });
+    }
+
+    return bindings;
+  };
+
+  ViewModel.prototype.setBindings = function() {
+    var self = this, pNodes, aBindings;
 
     function bindProp(p) {
       return function(e) {
@@ -159,16 +181,22 @@ var bindside = (function __bindside__() {
     }
 
     for(var p in this.props) {
-      var nodes = self.getNodesForProp(p);
+      pNodes = self.getNodesForProp(p);
 
       /* jshint ignore:start */
       (function(p) {
-        for(var i = 0, l = nodes.length; i < l; i++) {
-          nodes[i].addEventListener('change', bindProp(p)); 
+        for(var i = 0, l = pNodes.length; i < l; i++) {
+          pNodes[i].addEventListener('change', bindProp(p)); 
         }
       })(p);
       /* jshint ignore:end */
     }
+
+    self.getActionBindings().forEach(function(binding) {
+      (function(b) {
+        b.node.addEventListener(b.event, b.action); 
+      })(binding);
+    });
   };
 
   function assignValueToNodes(nodes, value) {
@@ -195,9 +223,9 @@ var bindside = (function __bindside__() {
     cb(vm);
 
     if(document.readyState !== 'loading') {
-      vm.bindProps(); 
+      vm.setBindings(); 
     } else {
-      document.addEventListener('DOMContentLoaded', vm.bindProps.bind(vm));
+      document.addEventListener('DOMContentLoaded', vm.setBindings.bind(vm));
     }
     
     return vm;
